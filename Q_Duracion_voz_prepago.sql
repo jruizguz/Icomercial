@@ -1,0 +1,28 @@
+SELECT TELE_NUMB NUM_TELEFONO                                    
+      ,VOZ.DUR_SEG TOTAL_DUR_VOZ_SEG
+FROM  DWH_DB.SEGMENTACION.INH_SEG_BSCS_CLIENTES CLI
+LEFT   JOIN DB_DWH_VOZ.VOZ.TBL_FACT_VOZ_TRAFICO_SALIENTE V ON V.CALLING_NUMBER = CLI.TELE_NUMB 
+                                               
+LEFT   JOIN ( SELECT CALLING_NUMBER
+             ,COUNT (CALLING_NUMBER) CANT_SMS
+               FROM DWH_DB.MDRS.SMSMMS
+              WHERE CAUSE_FOR_TERMINATION = '100C'
+                AND MESSAGE_DELIVERYTIME BETWEEN '2018-07-01 00:00:00' AND '2018-07-01 23:59:59'
+                AND RECORD_TYPE = 1
+           GROUP BY 1 
+            )SMS ON '57'||CLI.TELE_NUMB = SMS.CALLING_NUMBER
+                                               
+LEFT   JOIN ( SELECT CALLING_NUMBER
+             ,COUNT (CALLING_NUMBER) CANT_LLAM_SAL
+                                               ,ROUND(SUM(DURACION)) DUR_SEG
+               FROM DB_DWH_VOZ.VOZ.TBL_FACT_VOZ_TRAFICO_SALIENTE
+              WHERE FECHA_HORA BETWEEN '2018-07-01 00:00:00' AND '2018-07-01 23:59:59'                
+           GROUP BY 1 
+            )VOZ ON CLI.TELE_NUMB = VOZ.CALLING_NUMBER
+                                               
+AND TAB1.SK_NODO_MED <> 510
+AND E.TIPO_USUARIO = 'Prepago'
+AND CLI.TIPO_LINEA = 'Prepago'
+AND CLI.ESTADO = 'a' OR CLI.ESTADO = 's'
+GROUP BY TELE_NUMB,DUR_SEG
+LIMIT 100;
